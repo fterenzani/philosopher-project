@@ -24,7 +24,8 @@
         "oyejorge/less.php": "v1.7.0.9",
         "leafo/scssphp": "^0.3.2",
         "doctrine/cache": "^1.4",
-        "cocur/slugify": "^1.4"
+        "cocur/slugify": "^1.4",
+        "fterenzani/lazypdo": "^2.0"
     },
     "config": {
         "vendor-dir": "app/vendor"
