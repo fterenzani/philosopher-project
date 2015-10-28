@@ -3,7 +3,7 @@
 /**
  * Developement evnviroment
  */
-define('IS_DEV', in_array(@$_SERVER['HTTP_HOST'], ['localhost']));
+define('IS_DEV', in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1']));
 
 /**
  * Include path
