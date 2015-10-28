@@ -27,41 +27,66 @@ $loader->add('', __DIR__ . '/src');
  * Error handler
  */
 error_reporting(E_ALL);
-ini_set('display_errors', 'Off');
+ini_set('display_errors', 'On');
 ini_set('log_errors', 'On');
-ini_set('error_log', __DIR__ . '/tmp/logs/php_errors.txt');
+ini_set('error_log', sprintf(__DIR__ . '/tmp/logs/php_errors-%s.txt', date('Y-d-m')));
 
 if (php_sapi_name() !== 'cli') {
 
-	$whoops = new \Whoops\Run;
 	if (IS_DEV) {
+		$whoops = new \Whoops\Run;
 		$handler = new \Whoops\Handler\PrettyPageHandler;
 		$handler->setEditor('sublime');
 		$whoops->pushHandler($handler);
+		$whoops->register();
 
 	} else {
-		$whoops->pushHandler(function($e){
-			new Errors\Error(500, $e);
+
+		set_error_handler(function($errno, $errstr, $errfile, $errline) {
+		    if (error_reporting() & $errno) {
+				throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+		    }
+		});
+
+		set_exception_handler(function($e) {
+			abort(500);
+		});
+
+		register_shutdown_function(function() {
+		    $e = error_get_last();
+		    if ($e['type'] === E_ERROR) {
+		        abort(500);
+		    }
 		});
 
 	}
-	$whoops->register();
 
-} else {
-	ini_set('display_errors', 'On');
 }
 
 /**
- * Container
+ * Service Container
  */
 $container = new Pimple\Container;
-$container['BASE_PATH'] = '/sos2.0/';
+
+if (IS_DEV) {
+	$container['BASE_PATH'] = '/philosopher-project/';
+} else {
+	$container['BASE_PATH'] = '/';
+}
 
 $container['router'] = function($c) {
 	return new Socrate\Router($c);
 };
 $container['slugify'] = function($c) {
-	return new Slugify();
+	return new Cocur\Slugify\Slugify();
+};
+$container['db'] = function($c) {
+	return new Socrate\Pdo('sqlite:'.__DIR__.'/data/db.sqlite');
+};
+$container['cache'] = function($c) {
+	$cache = IS_DEV? new Doctrine\Common\Cache\ArrayCache(): new Doctrine\Common\Cache\PhpFileCache(__DIR__.'/tmp/cache');
+	$cache->setNamespace(@$_SERVER['HTTP_HOST']);
+	return $cache;
 };
 
 /**
@@ -83,10 +108,26 @@ function url_for_home()
 	return url();
 }
 
+function path_for($name, $args = null) 
+{
+	global $container;
+	return path($container['router']->getPath($name, $args));
+}
+
 function url_for($name, $args = null) 
 {
 	global $container;
 	return url($container['router']->getPath($name, $args));
+}
+
+function url_for_paginated($name, $args = null, $page = 1)
+{
+	$url = url_for($name, $args);
+	if ($page > 1) {
+		$url .= '?page='.$page;
+	}
+
+	return $url;
 }
 
 /**
@@ -103,54 +144,46 @@ function slugify($text, $separator = '-')
 	return $container['slugify']->slugify($text, $separator);
 }
 
-function abort()
+function abort($statusCode = 404, Exception $exception = null)
 {
-	throw new \Socrate\Http404();
+	global $container;
+	return new Socrate\ErrorPage($container, $statusCode, $exception);
+}
+
+function isAjax()
+{
+	return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+		strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';     
 }
 
 /**
- * The dispatcher
- *//*
-$dispatch = function($request, $rules) use($container) 
+ * Caching helpers
+ */
+function cacheStart($id, $lifeTime = 0)
 {
+	global $container;
 
-	foreach ($rules as $rule) 
-	{
+	$cache = $container['cache'];
 	
-		if (preg_match($rule[0], $request, $match)) 
-		{
-
-			$_GET += $match;
-
-			if (is_callable($rule[1])) 
-			{
-				return $rule[1]($container);
-
-			}
-
-			elseif (class_exists($rule[1]))
-			{
-				return new $rule[1]($container);
-			}
-
-			elseif (strpos($rule[1], '@'))
-			{
-
-				$subRule = explode('@', $rule[1]);
-				
-				$controller = new $subRule[0]($container);
-				return $controller->{$subRule[1]}();
-			}
-
-			else 
-			{
-				require $rule[1];
-			}
-
-		}
-
+	if ($cache->contains($id)) {
+		echo $cache->fetch($id);
+		return false;
 	}
 
-	throw new Http404;
+	ob_start(function($content) use ($cache, $id, $lifeTime){
+		$cache->save($id, $content, $lifeTime);
+		return $content;
+	});
 
-};*/
+	return true;
+}
+
+function cacheStop() 
+{
+	echo ob_get_clean();
+}
+
+/**
+ * Let's start
+ */
+ob_start();
