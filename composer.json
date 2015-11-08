@@ -25,9 +25,7 @@
         "leafo/scssphp": "^0.3.2",
         "doctrine/cache": "^1.4",
         "cocur/slugify": "^1.4",
-        "fterenzani/lazypdo": "^2.0"
-    },
-    "config": {
-        "vendor-dir": "app/vendor"
+        "fterenzani/lazypdo": "^2.0",
+        "swiftmailer/swiftmailer": "@stable"
     }
 }

@@ -29,7 +29,7 @@ $loader->add('', __DIR__ . '/src');
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 ini_set('log_errors', 'On');
-ini_set('error_log', sprintf(__DIR__ . '/tmp/logs/php_errors-%s.txt', date('Y-d-m')));
+ini_set('error_log', sprintf(__DIR__ . '/tmp/logs/php_errors-%s.txt', date('Y-m-d')));
 
 if (php_sapi_name() !== 'cli') {
 
@@ -49,12 +49,14 @@ if (php_sapi_name() !== 'cli') {
 		});
 
 		set_exception_handler(function($e) {
+			error_log($e);
 			abort(500);
 		});
 
 		register_shutdown_function(function() {
 		    $e = error_get_last();
 		    if ($e['type'] === E_ERROR) {
+		        error_log($e);
 		        abort(500);
 		    }
 		});
@@ -88,6 +90,14 @@ $container['cache'] = function($c) {
 	$cache->setNamespace(@$_SERVER['HTTP_HOST']);
 	return $cache;
 };
+$container['mailer'] = function($c) {
+	if (IS_DEV) {
+		$transport = Swift_NullTransport::newInstance();
+	} else {
+		$transport = Swift_MailTransport::newInstance();	
+	}
+	return Swift_Mailer::newInstance($transport);
+};
 
 /**
  * Interlinking functions
@@ -114,20 +124,10 @@ function path_for($name, $args = null)
 	return path($container['router']->getPath($name, $args));
 }
 
-function url_for($name, $args = null) 
+function url_for($name, $args = null, $schema = 'http://') 
 {
 	global $container;
-	return url($container['router']->getPath($name, $args));
-}
-
-function url_for_paginated($name, $args = null, $page = 1)
-{
-	$url = url_for($name, $args);
-	if ($page > 1) {
-		$url .= '?page='.$page;
-	}
-
-	return $url;
+	return url($container['router']->getPath($name, $args), $schema);
 }
 
 /**
