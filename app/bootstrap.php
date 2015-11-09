@@ -8,7 +8,7 @@ define('IS_DEV', in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1']));
 /**
  * Include path
  */
-set_include_path(__DIR__.'/src'. PATH_SEPARATOR . get_include_path());
+set_include_path(__DIR__. PATH_SEPARATOR . get_include_path());
 
 /**
  * Locale setting
@@ -20,8 +20,8 @@ setlocale(LC_ALL, 'en_US.UTF-8');
 /**
  * Autoloading
  */
-$loader = require __DIR__ . '/vendor/autoload.php';
-$loader->add('', __DIR__ . '/src');
+$loader = require __DIR__ . '/../vendor/autoload.php';
+$loader->add('', __DIR__);
 
 /**
  * Error handler
@@ -29,7 +29,7 @@ $loader->add('', __DIR__ . '/src');
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 ini_set('log_errors', 'On');
-ini_set('error_log', sprintf(__DIR__ . '/tmp/logs/php_errors-%s.txt', date('Y-m-d')));
+ini_set('error_log', sprintf(__DIR__ . '/../tmp/logs/php_errors-%s.txt', date('Y-m-d')));
 
 if (php_sapi_name() !== 'cli') {
 
