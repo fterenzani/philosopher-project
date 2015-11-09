@@ -20,7 +20,23 @@ setlocale(LC_ALL, 'en_US.UTF-8');
 /**
  * Autoloading
  */
-$loader = require __DIR__ . '/../vendor/autoload.php';
+
+require __DIR__  . '/../vendor/composer' . '/ClassLoader.php';
+
+$loader = new \Composer\Autoload\ClassLoader();
+
+$classMap = require __DIR__  . '/../vendor/composer' . '/autoload_classmap.php';
+if ($classMap) {
+    $loader->addClassMap($classMap);
+}
+
+$includeFiles = require __DIR__  . '/../vendor/composer' . '/autoload_files.php';
+foreach ($includeFiles as $file) {
+	Composer\Autoload\includeFile($file);
+}
+
+$loader->register(true);
+
 $loader->add('', __DIR__);
 
 /**
@@ -91,6 +107,7 @@ $container['cache'] = function($c) {
 	return $cache;
 };
 $container['mailer'] = function($c) {
+
 	if (IS_DEV) {
 		$transport = Swift_NullTransport::newInstance();
 	} else {
