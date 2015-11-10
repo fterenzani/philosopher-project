@@ -102,7 +102,7 @@ $container['db'] = function($c) {
 	return new Socrate\Pdo('sqlite:'.__DIR__.'/data/db.sqlite');
 };
 $container['cache'] = function($c) {
-	$cache = IS_DEV? new Doctrine\Common\Cache\ArrayCache(): new Doctrine\Common\Cache\PhpFileCache(__DIR__.'/tmp/cache');
+	$cache = IS_DEV? new Doctrine\Common\Cache\ArrayCache(): new Doctrine\Common\Cache\PhpFileCache(__DIR__.'/../tmp/cache');
 	$cache->setNamespace(@$_SERVER['HTTP_HOST']);
 	return $cache;
 };
