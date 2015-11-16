@@ -32,7 +32,7 @@ if ($classMap) {
 
 $includeFiles = require __DIR__  . '/../vendor/composer' . '/autoload_files.php';
 foreach ($includeFiles as $file) {
-	Composer\Autoload\includeFile($file);
+    Composer\Autoload\includeFile($file);
 }
 
 $loader->register(true);
@@ -49,71 +49,71 @@ ini_set('error_log', sprintf(__DIR__ . '/../tmp/logs/php_errors-%s.txt', date('Y
 
 if (php_sapi_name() !== 'cli') {
 
-	if (IS_DEV) {
-		$whoops = new \Whoops\Run;
-		$handler = new \Whoops\Handler\PrettyPageHandler;
-		$handler->setEditor('sublime');
-		$whoops->pushHandler($handler);
-		$whoops->register();
+    if (IS_DEV) {
+        $whoops = new \Whoops\Run;
+        $handler = new \Whoops\Handler\PrettyPageHandler;
+        $handler->setEditor('sublime');
+        $whoops->pushHandler($handler);
+        $whoops->register();
 
-	} else {
+    } else {
 
-		set_error_handler(function($errno, $errstr, $errfile, $errline) {
-		    if (error_reporting() & $errno) {
-				throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
-		    }
-		});
+        set_error_handler(function($errno, $errstr, $errfile, $errline) {
+            if (error_reporting() & $errno) {
+                throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+            }
+        });
 
-		set_exception_handler(function($e) {
-			error_log($e);
-			abort(500);
-		});
+        set_exception_handler(function($e) {
+            error_log($e);
+            abort(500);
+        });
 
-		register_shutdown_function(function() {
-		    $e = error_get_last();
-		    if ($e['type'] === E_ERROR) {
-		        error_log($e);
-		        abort(500);
-		    }
-		});
+        register_shutdown_function(function() {
+            $e = error_get_last();
+            if ($e['type'] === E_ERROR) {
+                error_log($e);
+                abort(500);
+            }
+        });
 
-	}
+    }
 
 }
 
 /**
- * Service Container
+ * Dependency Injection Container
+ * http://pimple.sensiolabs.org/
  */
-$container = new Pimple\Container;
+$di = new Pimple\Container;
 
 if (IS_DEV) {
-	$container['BASE_PATH'] = '/philosopher-project/';
+    $di['BASE_PATH'] = '/philosopher-project/';
 } else {
-	$container['BASE_PATH'] = '/';
+    $di['BASE_PATH'] = '/';
 }
 
-$container['router'] = function($c) {
-	return new Socrate\Router($c);
+$di['router'] = function($di) {
+    return new Socrate\Router($di);
 };
-$container['slugify'] = function($c) {
-	return new Cocur\Slugify\Slugify();
+$di['slugify'] = function($di) {
+    return new Cocur\Slugify\Slugify();
 };
-$container['db'] = function($c) {
-	return new Socrate\Pdo('sqlite:'.__DIR__.'/data/db.sqlite');
+$di['db'] = function($di) {
+    return new Socrate\Pdo('sqlite:'.__DIR__.'/data/db.sqlite');
 };
-$container['cache'] = function($c) {
-	$cache = IS_DEV? new Doctrine\Common\Cache\ArrayCache(): new Doctrine\Common\Cache\PhpFileCache(__DIR__.'/../tmp/cache');
-	$cache->setNamespace(@$_SERVER['HTTP_HOST']);
-	return $cache;
+$di['cache'] = function($di) {
+    $cache = IS_DEV? new Doctrine\Common\Cache\ArrayCache(): new Doctrine\Common\Cache\PhpFileCache(__DIR__.'/../tmp/cache');
+    $cache->setNamespace(@$_SERVER['HTTP_HOST']);
+    return $cache;
 };
-$container['mailer'] = function($c) {
-
-	if (IS_DEV) {
-		$transport = Swift_NullTransport::newInstance();
-	} else {
-		$transport = Swift_MailTransport::newInstance();	
-	}
-	return Swift_Mailer::newInstance($transport);
+$di['mailer'] = function($di) {
+    if (IS_DEV) {
+        $transport = Swift_NullTransport::newInstance();
+    } else {
+        $transport = Swift_MailTransport::newInstance();    
+    }
+    return Swift_Mailer::newInstance($transport);
 };
 
 /**
@@ -121,30 +121,30 @@ $container['mailer'] = function($c) {
  */
 function path($path = null) 
 {
-	global $container;
-	return $container['BASE_PATH'] . $path;
+    global $di;
+    return $di['BASE_PATH'] . $path;
 }
 
 function url($path = null, $schema = 'http://') 
 {
-	return $schema . $_SERVER['HTTP_HOST'] . path($path);
+    return $schema . $_SERVER['HTTP_HOST'] . path($path);
 }
 
 function url_for_home() 
 {
-	return url();
+    return url();
 }
 
 function path_for($name, $args = null) 
 {
-	global $container;
-	return path($container['router']->getPath($name, $args));
+    global $di;
+    return path($di['router']->getPath($name, $args));
 }
 
 function url_for($name, $args = null, $schema = 'http://') 
 {
-	global $container;
-	return url($container['router']->getPath($name, $args), $schema);
+    global $di;
+    return url($di['router']->getPath($name, $args), $schema);
 }
 
 /**
@@ -152,25 +152,25 @@ function url_for($name, $args = null, $schema = 'http://')
  */
 function escape($input) 
 {
-	return htmlspecialchars($input, ENT_QUOTES|ENT_HTML5, 'UTF-8');
+    return htmlspecialchars($input, ENT_QUOTES|ENT_HTML5, 'UTF-8');
 }
 
 function slugify($text, $separator = '-') 
 {
-	global $container;
-	return $container['slugify']->slugify($text, $separator);
+    global $di;
+    return $di['slugify']->slugify($text, $separator);
 }
 
 function abort($statusCode = 404, Exception $exception = null)
 {
-	global $container;
-	return new Socrate\ErrorPage($container, $statusCode, $exception);
+    global $di;
+    return new Socrate\ErrorPage($di, $statusCode, $exception);
 }
 
 function isAjax()
 {
-	return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
-		strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';     
+    return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+        strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';     
 }
 
 /**
@@ -178,26 +178,26 @@ function isAjax()
  */
 function cacheStart($id, $lifeTime = 0)
 {
-	global $container;
+    global $di;
 
-	$cache = $container['cache'];
-	
-	if ($cache->contains($id)) {
-		echo $cache->fetch($id);
-		return false;
-	}
+    $cache = $di['cache'];
+    
+    if ($cache->contains($id)) {
+        echo $cache->fetch($id);
+        return false;
+    }
 
-	ob_start(function($content) use ($cache, $id, $lifeTime){
-		$cache->save($id, $content, $lifeTime);
-		return $content;
-	});
+    ob_start(function($content) use ($cache, $id, $lifeTime){
+        $cache->save($id, $content, $lifeTime);
+        return $content;
+    });
 
-	return true;
+    return true;
 }
 
 function cacheStop() 
 {
-	echo ob_get_clean();
+    echo ob_get_clean();
 }
 
 /**
