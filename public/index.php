@@ -1,7 +1,7 @@
 <?php
 
-require __DIR__.'/../app/bootstrap.php';
-$routing = require __DIR__.'/../app/routing.php';
+require __DIR__.'/../bootstrap.php';
+$routing = require __DIR__.'/../routing.php';
 
 $r = $container['router'];
 $r->urls = $routing;

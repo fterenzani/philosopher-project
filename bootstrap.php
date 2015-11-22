@@ -21,16 +21,16 @@ setlocale(LC_ALL, 'en_US.UTF-8');
  * Autoloading
  */
 
-require __DIR__  . '/../vendor/composer' . '/ClassLoader.php';
+require __DIR__  . '/vendor/composer' . '/ClassLoader.php';
 
 $loader = new \Composer\Autoload\ClassLoader();
 
-$classMap = require __DIR__  . '/../vendor/composer' . '/autoload_classmap.php';
+$classMap = require __DIR__  . '/vendor/composer' . '/autoload_classmap.php';
 if ($classMap) {
     $loader->addClassMap($classMap);
 }
 
-$includeFiles = require __DIR__  . '/../vendor/composer' . '/autoload_files.php';
+$includeFiles = require __DIR__  . '/vendor/composer' . '/autoload_files.php';
 foreach ($includeFiles as $file) {
     Composer\Autoload\includeFile($file);
 }
@@ -45,7 +45,7 @@ $loader->add('', __DIR__);
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 ini_set('log_errors', 'On');
-ini_set('error_log', sprintf(__DIR__ . '/../tmp/logs/php_errors-%s.txt', date('Y-m-d')));
+ini_set('error_log', sprintf(__DIR__ . '/data/logs/php_errors-%s.txt', date('Y-m-d')));
 
 if (php_sapi_name() !== 'cli') {
 
@@ -103,7 +103,11 @@ $di['db'] = function($di) {
     return new Socrate\Pdo('sqlite:'.__DIR__.'/data/db.sqlite');
 };
 $di['cache'] = function($di) {
-    $cache = IS_DEV? new Doctrine\Common\Cache\ArrayCache(): new Doctrine\Common\Cache\PhpFileCache(__DIR__.'/../tmp/cache');
+    if (IS_DEV) {
+        $cache = new Doctrine\Common\Cache\ArrayCache();
+    } else {
+        $cache = new Doctrine\Common\Cache\PhpFileCache(__DIR__.'/data/cache');    
+    }
     $cache->setNamespace(@$_SERVER['HTTP_HOST']);
     return $cache;
 };
