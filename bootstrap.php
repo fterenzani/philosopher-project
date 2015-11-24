@@ -3,7 +3,21 @@
 /**
  * Developement evnviroment
  */
-define('IS_DEV', in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1']));
+define('IS_DEV', in_array(@$_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1']));
+
+/**
+ * Document & base path
+ */
+define('DOCUMENT_ROOT', __DIR__);
+$base = '/';
+$parts = array_slice(explode('/', explode('/public/', $_SERVER['PHP_SELF'])[0]), 1);
+
+foreach ($parts as $part) {
+    if (strpos($_SERVER['PHP_SELF'], $base . $part . '/') === 0) {
+        $base .= $part . '/';
+    }
+}
+define('BASE_PATH', $base);
 
 /**
  * Include path
@@ -17,27 +31,27 @@ set_include_path(__DIR__. PATH_SEPARATOR . get_include_path());
 date_default_timezone_set('UTC');
 setlocale(LC_ALL, 'en_US.UTF-8');
 
+
 /**
  * Autoloading
  */
-
-require __DIR__  . '/vendor/composer' . '/ClassLoader.php';
+require DOCUMENT_ROOT  . '/vendor/composer' . '/ClassLoader.php';
 
 $loader = new \Composer\Autoload\ClassLoader();
 
-$classMap = require __DIR__  . '/vendor/composer' . '/autoload_classmap.php';
+$classMap = require DOCUMENT_ROOT  . '/vendor/composer' . '/autoload_classmap.php';
 if ($classMap) {
     $loader->addClassMap($classMap);
 }
 
-$includeFiles = require __DIR__  . '/vendor/composer' . '/autoload_files.php';
+$includeFiles = require DOCUMENT_ROOT  . '/vendor/composer' . '/autoload_files.php';
 foreach ($includeFiles as $file) {
     Composer\Autoload\includeFile($file);
 }
 
 $loader->register(true);
 
-$loader->add('', __DIR__);
+$loader->add('', DOCUMENT_ROOT . '/src');
 
 /**
  * Error handler
@@ -45,7 +59,7 @@ $loader->add('', __DIR__);
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 ini_set('log_errors', 'On');
-ini_set('error_log', sprintf(__DIR__ . '/data/logs/php_errors-%s.txt', date('Y-m-d')));
+ini_set('error_log', sprintf(DOCUMENT_ROOT . '/data/logs/php_errors-%s.txt', date('Y-m-d')));
 
 if (php_sapi_name() !== 'cli') {
 
@@ -87,12 +101,6 @@ if (php_sapi_name() !== 'cli') {
  */
 $di = new Pimple\Container;
 
-if (IS_DEV) {
-    $di['BASE_PATH'] = '/philosopher-project/';
-} else {
-    $di['BASE_PATH'] = '/';
-}
-
 $di['router'] = function($di) {
     return new Socrate\Router($di);
 };
@@ -100,13 +108,13 @@ $di['slugify'] = function($di) {
     return new Cocur\Slugify\Slugify();
 };
 $di['db'] = function($di) {
-    return new Socrate\Pdo('sqlite:'.__DIR__.'/data/db.sqlite');
+    return new Socrate\Pdo('sqlite:'.DOCUMENT_ROOT.'/data/db.sqlite');
 };
-$di['cache'] = function($di) {
+$di['cache'] = function($di) { // @todo: find an alternative to doctrine cache
     if (IS_DEV) {
         $cache = new Doctrine\Common\Cache\ArrayCache();
     } else {
-        $cache = new Doctrine\Common\Cache\PhpFileCache(__DIR__.'/data/cache');    
+        $cache = new Doctrine\Common\Cache\PhpFileCache(DOCUMENT_ROOT.'/data/cache');    
     }
     $cache->setNamespace(@$_SERVER['HTTP_HOST']);
     return $cache;
@@ -123,32 +131,32 @@ $di['mailer'] = function($di) {
 /**
  * Interlinking functions
  */
-function path($path = null) 
+function _path($path = null) 
+{
+    return BASE_PATH . $path;
+}
+
+function _url($path = null, $schema = 'http://') 
+{
+    return $schema . $_SERVER['HTTP_HOST'] . _path($path);
+}
+
+function path($name, $args = null) 
 {
     global $di;
-    return $di['BASE_PATH'] . $path;
+    return _path($di['router']->getPath($name, $args));
 }
 
-function url($path = null, $schema = 'http://') 
-{
-    return $schema . $_SERVER['HTTP_HOST'] . path($path);
-}
-
-function url_for_home() 
-{
-    return url();
-}
-
-function path_for($name, $args = null) 
+function url($name, $args = null, $schema = 'http://') 
 {
     global $di;
-    return path($di['router']->getPath($name, $args));
+    return _url($di['router']->getPath($name, $args), $schema);
 }
 
-function url_for($name, $args = null, $schema = 'http://') 
+function asset($path)
 {
-    global $di;
-    return url($di['router']->getPath($name, $args), $schema);
+    $source = DOCUMENT_ROOT . '/public/' . $path;
+    return _path($path) . '?' . filemtime($source);
 }
 
 /**
@@ -175,33 +183,6 @@ function isAjax()
 {
     return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
         strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';     
-}
-
-/**
- * Caching helpers
- */
-function cacheStart($id, $lifeTime = 0)
-{
-    global $di;
-
-    $cache = $di['cache'];
-    
-    if ($cache->contains($id)) {
-        echo $cache->fetch($id);
-        return false;
-    }
-
-    ob_start(function($content) use ($cache, $id, $lifeTime){
-        $cache->save($id, $content, $lifeTime);
-        return $content;
-    });
-
-    return true;
-}
-
-function cacheStop() 
-{
-    echo ob_get_clean();
 }
 
 /**
