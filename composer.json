@@ -27,6 +27,11 @@
         "cocur/slugify": "^1.4",
         "swiftmailer/swiftmailer": "@stable"
     },
+    "autoload": {
+        "psr-4": {
+            "": "src/"
+        }
+    },
     "config": {
         "optimize-autoloader": true
     }

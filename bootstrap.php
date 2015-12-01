@@ -51,8 +51,6 @@ foreach ($includeFiles as $file) {
 
 $loader->register(true);
 
-$loader->add('', DOCUMENT_ROOT . '/src');
-
 /**
  * Error handler
  */
@@ -86,7 +84,7 @@ if (php_sapi_name() !== 'cli') {
         register_shutdown_function(function() {
             $e = error_get_last();
             if ($e['type'] === E_ERROR) {
-                error_log($e);
+                error_log(new ErrorException($e['message'], 0, $e['type'], $e['file'], $e['line']));
                 abort(500);
             }
         });

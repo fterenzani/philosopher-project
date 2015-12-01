@@ -12,6 +12,7 @@ $title = 'Welcome';
 	<?php echo _path() ?><br>
 	<?php echo path('home') ?><br>
 
+
 </div>
 
 <?php require 'views/base.php' ?>
