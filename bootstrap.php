@@ -35,21 +35,8 @@ setlocale(LC_ALL, 'en_US.UTF-8');
 /**
  * Autoloading
  */
-require DOCUMENT_ROOT  . '/vendor/composer' . '/ClassLoader.php';
-
-$loader = new \Composer\Autoload\ClassLoader();
-
-$classMap = require DOCUMENT_ROOT  . '/vendor/composer' . '/autoload_classmap.php';
-if ($classMap) {
-    $loader->addClassMap($classMap);
-}
-
-$includeFiles = require DOCUMENT_ROOT  . '/vendor/composer' . '/autoload_files.php';
-foreach ($includeFiles as $file) {
-    Composer\Autoload\includeFile($file);
-}
-
-$loader->register(true);
+$loader = require DOCUMENT_ROOT . '/vendor/autoload.php';
+$loader->add('', __DIR__.'/src');
 
 /**
  * Error handler
@@ -106,7 +93,7 @@ $di['slugify'] = function($di) {
     return new Cocur\Slugify\Slugify();
 };
 $di['db'] = function($di) {
-    return new Socrate\Pdo('sqlite:'.DOCUMENT_ROOT.'/data/db.sqlite');
+    return new LazyPdo\Pdo('sqlite:'.DOCUMENT_ROOT.'/data/db.sqlite');
 };
 $di['cache'] = function($di) { // @todo: find an alternative to doctrine cache
     if (IS_DEV) {
